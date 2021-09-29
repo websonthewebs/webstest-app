@@ -1,0 +1,41 @@
+---
+orbs:
+  azure-cli: circleci/azure-cli@1.2.0
+  slack: circleci/slack@4.4.4
+version: 2.1
+
+parameters:
+  container-name:
+    type: string
+    default: '$web'
+  file-to-upload:
+    type: string
+    default: 'index.html'
+  cohort-context-name:
+    type: string
+    default: 'cohort-template'
+
+jobs:
+  upload-file:
+    executor: azure-cli/default
+    steps:
+      - checkout
+      - azure-cli/install
+      - run:
+          name: "Upload file to Blob Storage"
+          command: | # Credentials are retrieved from the context
+            az storage blob upload \
+              --container-name '<< pipeline.parameters.container-name >>' \
+              --file '<< pipeline.parameters.file-to-upload >>' \
+              --name '<< pipeline.parameters.file-to-upload >>'
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+
+workflows:
+  public-website-publishing:
+    jobs:
+      - upload-file:
+          context:
+            - slack-secrets
+            - << pipeline.parameters.cohort-context-name >>
